@@ -100,12 +100,8 @@ body {
 
 /* ── CALENDAR ── */
 .calendar-container { padding: 14px 20px; }
-.month-section { margin-bottom: 6px; }
-.month-section-title {
-  text-align: center; font-size: 1rem;
-  color: var(--primary); padding: 6px 0 4px;
-  letter-spacing: 0.05em;
-}
+.month-section { margin: 0; }
+.day-num.month-start { color: var(--primary); font-size: 0.7rem; }
 .cal-header {
   display: grid; grid-template-columns: repeat(7, 1fr);
   margin-bottom: 6px;
@@ -314,6 +310,14 @@ body {
     <button class="nav-btn" onclick="App.showMyRecords()">내 기록 →</button>
   </div>
   <div class="calendar-container">
+    <div style="text-align:center; font-size:0.95rem; color:var(--primary); padding: 8px 0 6px; letter-spacing:0.04em;">2026년 6-8월</div>
+    <div class="cal-header">
+      <div class="cal-header-day" style="color:#FF6B6B">일</div>
+      <div class="cal-header-day">월</div><div class="cal-header-day">화</div>
+      <div class="cal-header-day">수</div><div class="cal-header-day">목</div>
+      <div class="cal-header-day">금</div>
+      <div class="cal-header-day" style="color:#6B8CFF">토</div>
+    </div>
     <div id="cal-container"></div>
   </div>
 </div>
@@ -608,14 +612,8 @@ function getWeeks() {
 // ====================================================
 // CALENDAR RENDER
 // ====================================================
-const DAY_HEADERS = `
-  <div class="cal-header">
-    <div class="cal-header-day" style="color:#FF6B6B">일</div>
-    <div class="cal-header-day">월</div><div class="cal-header-day">화</div>
-    <div class="cal-header-day">수</div><div class="cal-header-day">목</div>
-    <div class="cal-header-day">금</div>
-    <div class="cal-header-day" style="color:#6B8CFF">토</div>
-  </div>`;
+// first visible day of each month section (shown as "M/D" in the cell)
+const MONTH_STARTS = { 6: 22, 7: 1, 8: 1 };
 
 function renderAllCal() {
   const container = document.getElementById('cal-container');
@@ -663,7 +661,10 @@ function renderAllCal() {
       const todayCls = isToday(YEAR, month, day) ? ' today' : '';
       const myCls = myWks.length > 0 ? ' my-day' : '';
       const dow = new Date(YEAR, month-1, day).getDay();
+      const isMonthStart = MONTH_STARTS[month] === day;
+      const numCls = isMonthStart ? ' month-start' : '';
       const numColor = dow===0 ? 'color:#FF6B6B' : dow===6 ? 'color:#6B8CFF' : '';
+      const dayLabel = isMonthStart ? `${month}/${day}` : `${day}`;
 
       const profiles = wks.map(w => {
         const u = allUsers[w.userId];
@@ -672,16 +673,12 @@ function renderAllCal() {
       }).join('');
 
       cells += `<div class="day-cell${todayCls}${myCls}" onclick="App.dayClick('${d}',true)">
-        <div class="day-num" style="${numColor}">${day}</div>
+        <div class="day-num${numCls}" style="${numColor}">${dayLabel}</div>
         <div class="day-profiles">${profiles}</div>
       </div>`;
     }
 
-    html += `<div class="month-section">
-      <div class="month-section-title">${YEAR}년 ${month}월</div>
-      ${DAY_HEADERS}
-      <div class="cal-grid">${cells}</div>
-    </div>`;
+    html += `<div class="month-section"><div class="cal-grid">${cells}</div></div>`;
   });
 
   container.innerHTML = html;
