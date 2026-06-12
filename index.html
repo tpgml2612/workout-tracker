@@ -98,20 +98,14 @@ body {
   width: 36px;
 }
 
-/* ── MONTH TABS ── */
-.month-tabs { display: flex; padding: 14px 20px 0; gap: 8px; }
-.month-tab {
-  flex: 1; padding: 8px;
-  background: var(--card); border: 2px solid var(--border);
-  border-radius: 12px;
-  font-family: 'Jua', sans-serif; font-size: 0.9rem;
-  color: var(--text-light); cursor: pointer; transition: all 0.2s;
-  text-align: center;
-}
-.month-tab.active { background: var(--primary); border-color: var(--primary); color: white; }
-
 /* ── CALENDAR ── */
 .calendar-container { padding: 14px 20px; }
+.month-section { margin-bottom: 24px; }
+.month-section-title {
+  text-align: center; font-size: 1rem;
+  color: var(--primary); padding: 10px 0 8px;
+  letter-spacing: 0.05em;
+}
 .cal-header {
   display: grid; grid-template-columns: repeat(7, 1fr);
   margin-bottom: 6px;
@@ -248,6 +242,47 @@ body {
 .we-detail { font-size: 0.78rem; color: var(--text-light); line-height: 1.6; }
 .empty-state { text-align: center; padding: 36px 20px; color: var(--text-light); font-size: 0.88rem; }
 .empty-state-emoji { font-size: 2.8rem; margin-bottom: 10px; }
+
+/* ── COLOR SWATCHES ── */
+.color-label { font-size: 0.82rem; color: var(--text-light); margin: 4px 0 8px; }
+.color-swatches { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 16px; }
+.color-swatch {
+  width: 34px; height: 34px; border-radius: 50%;
+  cursor: pointer; transition: transform 0.15s;
+  border: 3px solid transparent; box-sizing: border-box;
+}
+.color-swatch:hover { transform: scale(1.18); }
+.color-swatch.selected { border-color: #333; transform: scale(1.18); }
+
+/* ── MY WORKOUT LIST ── */
+.my-wk-item {
+  background: var(--card); border-radius: 12px;
+  padding: 12px 14px; margin: 0 20px 8px;
+  box-shadow: 0 2px 6px var(--shadow);
+}
+.my-wk-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.my-wk-date { font-size: 0.85rem; color: var(--primary); }
+.my-wk-btns { display: flex; gap: 6px; }
+.my-wk-btn {
+  padding: 4px 10px; border: none; border-radius: 8px;
+  font-family: 'Jua', sans-serif; font-size: 0.75rem; cursor: pointer; transition: all 0.15s;
+}
+.my-wk-edit { background: #E8F0FF; color: #4A6CF7; }
+.my-wk-edit:hover { background: #4A6CF7; color: white; }
+.my-wk-del { background: #FFE0E0; color: #FF6B6B; }
+.my-wk-del:hover { background: #FF6B6B; color: white; }
+.my-wk-exs { font-size: 0.8rem; color: var(--text-light); line-height: 1.6; }
+
+/* ── DELETE ACCOUNT ── */
+.delete-account-btn {
+  display: block; width: calc(100% - 40px); margin: 8px 20px 40px;
+  padding: 13px; border: none; border-radius: 12px;
+  background: #FFF0F0; color: #FF6B6B;
+  font-family: 'Jua', sans-serif; font-size: 0.9rem; cursor: pointer;
+  transition: all 0.2s;
+}
+.delete-account-btn:hover { background: #FF6B6B; color: white; }
+
 ::-webkit-scrollbar { width: 0; }
 </style>
 </head>
@@ -278,20 +313,8 @@ body {
     <span class="screen-title">🏃 운동 기록</span>
     <button class="nav-btn" onclick="App.showMyRecords()">내 기록 →</button>
   </div>
-  <div class="month-tabs">
-    <button class="month-tab active" data-month="6" onclick="App.switchMonth(6)">6월</button>
-    <button class="month-tab" data-month="7" onclick="App.switchMonth(7)">7월</button>
-    <button class="month-tab" data-month="8" onclick="App.switchMonth(8)">8월</button>
-  </div>
   <div class="calendar-container">
-    <div class="cal-header">
-      <div class="cal-header-day" style="color:#FF6B6B">일</div>
-      <div class="cal-header-day">월</div><div class="cal-header-day">화</div>
-      <div class="cal-header-day">수</div><div class="cal-header-day">목</div>
-      <div class="cal-header-day">금</div>
-      <div class="cal-header-day" style="color:#6B8CFF">토</div>
-    </div>
-    <div id="cal-grid" class="cal-grid"></div>
+    <div id="cal-container"></div>
   </div>
 </div>
 
@@ -313,7 +336,10 @@ body {
   <div class="section-title">주간 현황</div>
   <div id="weekly-breakdown"></div>
   <div class="section-title">내 운동 달력</div>
-  <div id="my-calendar" style="padding-bottom:40px;"></div>
+  <div id="my-calendar"></div>
+  <div class="section-title">운동 기록 목록</div>
+  <div id="my-workout-list" style="padding-bottom:16px;"></div>
+  <button class="delete-account-btn" onclick="App.deleteAccount()">계정 삭제 🗑️</button>
 </div>
 
 </div><!-- #app -->
@@ -324,6 +350,8 @@ body {
     <div class="modal-handle"></div>
     <h2 class="modal-title">새 친구 추가 🙌</h2>
     <input id="new-name" type="text" class="input-field" placeholder="이름을 입력하세요" maxlength="6" onkeydown="if(event.key==='Enter')App.addUser()">
+    <div class="color-label">나의 색깔 선택</div>
+    <div id="color-swatches" class="color-swatches"></div>
     <button class="btn btn-p" onclick="App.addUser()">추가하기</button>
     <button class="btn btn-s" onclick="App.closeModal('m-adduser')">취소</button>
   </div>
@@ -342,7 +370,7 @@ body {
       </div>
     </div>
     <div id="wk-form" style="display:none">
-      <h2 class="modal-title">오늘의 운동 💪</h2>
+      <h2 id="wk-form-title" class="modal-title">오늘의 운동 💪</h2>
       <div id="ex-entries"></div>
       <button class="add-ex-btn" onclick="App.addExRow()">+ 운동 추가</button>
       <textarea id="wk-note" class="input-field" placeholder="메모 (선택사항)" rows="2" style="resize:none;"></textarea>
@@ -371,7 +399,7 @@ body {
 // ====================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import {
-  getFirestore, collection, doc, setDoc, getDocs, query, where, serverTimestamp
+  getFirestore, collection, doc, setDoc, getDocs, deleteDoc, query, where, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -407,6 +435,8 @@ let allUsers = {};       // { id: {name,color} }
 let workouts = {};       // { "YYYY-MM-DD": [workoutObj,...] }
 let selDate = null;
 let curMonth = 6;
+let selectedColor = null;
+let editingWorkoutId = null;
 
 // ====================================================
 // HELPERS
@@ -445,12 +475,31 @@ async function loadUsers() {
   snap.forEach(d => { allUsers[d.id] = d.data(); });
 }
 
-async function createUser(name) {
+async function createUser(name, color) {
   const uid = 'u_' + Date.now();
-  const color = COLORS[Object.keys(allUsers).length % COLORS.length];
   await setDoc(doc(db,'users',uid), { name, color, createdAt: serverTimestamp() });
   allUsers[uid] = { name, color };
   return { id: uid, name, color };
+}
+
+async function deleteUserFromDB(uid) {
+  const q = query(collection(db,'workouts'), where('userId','==',uid));
+  const snap = await getDocs(q);
+  await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+  await deleteDoc(doc(db,'users',uid));
+}
+
+async function deleteWorkoutFromDB(wid) {
+  await deleteDoc(doc(db,'workouts',wid));
+}
+
+async function updateWorkoutInDB(wid, dateStr, exercises, note) {
+  const obj = { userId: currentUser.id, date: dateStr, exercises, note: note||'', updatedAt: serverTimestamp() };
+  await setDoc(doc(db,'workouts',wid), obj);
+  if (workouts[dateStr]) {
+    const idx = workouts[dateStr].findIndex(w => w.id === wid);
+    if (idx !== -1) workouts[dateStr][idx] = { id: wid, ...obj };
+  }
 }
 
 async function loadWorkoutsMonth(m) {
@@ -559,38 +608,58 @@ function getWeeks() {
 // ====================================================
 // CALENDAR RENDER
 // ====================================================
-function renderCal(month) {
-  const grid = document.getElementById('cal-grid');
-  const last = new Date(YEAR, month, 0).getDate();
-  const firstDow = new Date(YEAR, month-1, 1).getDay();
+const DAY_HEADERS = `
+  <div class="cal-header">
+    <div class="cal-header-day" style="color:#FF6B6B">일</div>
+    <div class="cal-header-day">월</div><div class="cal-header-day">화</div>
+    <div class="cal-header-day">수</div><div class="cal-header-day">목</div>
+    <div class="cal-header-day">금</div>
+    <div class="cal-header-day" style="color:#6B8CFF">토</div>
+  </div>`;
+
+function renderAllCal() {
+  const container = document.getElementById('cal-container');
   let html = '';
 
-  for (let i = 0; i < firstDow; i++)
-    html += '<div class="day-cell disabled"></div>';
+  [6, 7, 8].forEach(month => {
+    const last = new Date(YEAR, month, 0).getDate();
+    const firstDow = new Date(YEAR, month-1, 1).getDay();
+    let cells = '';
 
-  for (let day = 1; day <= last; day++) {
-    const d = ds(YEAR, month, day);
-    const ir = inRange(YEAR, month, day);
-    const wks = workouts[d] || [];
-    const myWks = wks.filter(w => w.userId === currentUser?.id);
-    const todayCls = isToday(YEAR,month,day) ? ' today' : '';
-    const myCls = myWks.length > 0 ? ' my-day' : '';
-    const rangeCls = ir ? '' : ' out-range';
-    const dow = new Date(YEAR, month-1, day).getDay();
-    const numColor = dow===0 ? 'color:#FF6B6B' : dow===6 ? 'color:#6B8CFF' : '';
+    for (let i = 0; i < firstDow; i++)
+      cells += '<div class="day-cell disabled"></div>';
 
-    const profiles = wks.map(w => {
-      const u = allUsers[w.userId];
-      if (!u) return '';
-      return `<div class="mini-circle" style="background:${u.color}" title="${u.name}">${shortName(u)}</div>`;
-    }).join('');
+    for (let day = 1; day <= last; day++) {
+      const d = ds(YEAR, month, day);
+      const ir = inRange(YEAR, month, day);
+      const wks = workouts[d] || [];
+      const myWks = wks.filter(w => w.userId === currentUser?.id);
+      const todayCls = isToday(YEAR,month,day) ? ' today' : '';
+      const myCls = myWks.length > 0 ? ' my-day' : '';
+      const rangeCls = ir ? '' : ' out-range';
+      const dow = new Date(YEAR, month-1, day).getDay();
+      const numColor = dow===0 ? 'color:#FF6B6B' : dow===6 ? 'color:#6B8CFF' : '';
 
-    html += `<div class="day-cell${rangeCls}${todayCls}${myCls}" onclick="App.dayClick('${d}',${ir})">
-      <div class="day-num" style="${numColor}">${day}</div>
-      <div class="day-profiles">${profiles}</div>
+      const profiles = wks.map(w => {
+        const u = allUsers[w.userId];
+        if (!u) return '';
+        return `<div class="mini-circle" style="background:${u.color}" title="${u.name}">${shortName(u)}</div>`;
+      }).join('');
+
+      cells += `<div class="day-cell${rangeCls}${todayCls}${myCls}" onclick="App.dayClick('${d}',${ir})">
+        <div class="day-num" style="${numColor}">${day}</div>
+        <div class="day-profiles">${profiles}</div>
+      </div>`;
+    }
+
+    html += `<div class="month-section">
+      <div class="month-section-title">${YEAR}년 ${month}월</div>
+      ${DAY_HEADERS}
+      <div class="cal-grid">${cells}</div>
     </div>`;
-  }
-  grid.innerHTML = html;
+  });
+
+  container.innerHTML = html;
 }
 
 // ====================================================
@@ -647,14 +716,28 @@ const App = {
 
   openAddUser() {
     document.getElementById('new-name').value = '';
+    selectedColor = COLORS[0];
+    this.renderColorSwatches();
     this.openModal('m-adduser');
     setTimeout(() => document.getElementById('new-name').focus(), 300);
+  },
+
+  renderColorSwatches() {
+    const container = document.getElementById('color-swatches');
+    container.innerHTML = COLORS.map(c =>
+      `<div class="color-swatch${c===selectedColor?' selected':''}" style="background:${c}" onclick="App.setColor('${c}')"></div>`
+    ).join('');
+  },
+
+  setColor(color) {
+    selectedColor = color;
+    this.renderColorSwatches();
   },
 
   async addUser() {
     const name = document.getElementById('new-name').value.trim();
     if (!name) return;
-    await createUser(name);
+    await createUser(name, selectedColor || COLORS[0]);
     this.closeModal('m-adduser');
     this.renderUserGrid();
   },
@@ -666,22 +749,8 @@ const App = {
     document.getElementById('topbar-name').textContent = currentUser.name;
 
     await loadAllWorkouts();
-    curMonth = 6;
-    this.updateMonthTabs(6);
     this.showScreen('screen-main');
-    renderCal(6);
-  },
-
-  switchMonth(m) {
-    curMonth = m;
-    this.updateMonthTabs(m);
-    renderCal(m);
-  },
-
-  updateMonthTabs(m) {
-    document.querySelectorAll('.month-tab').forEach(t => {
-      t.classList.toggle('active', +t.dataset.month === m);
-    });
+    renderAllCal();
   },
 
   dayClick(dateStr, ir) {
@@ -707,8 +776,10 @@ const App = {
   },
 
   showWorkoutForm() {
+    editingWorkoutId = null;
     document.getElementById('wk-confirm').style.display = 'none';
     document.getElementById('wk-form').style.display = 'block';
+    document.getElementById('wk-form-title').textContent = '오늘의 운동 💪';
     document.getElementById('ex-entries').innerHTML = '';
     document.getElementById('wk-note').value = '';
     this.addExRow();
@@ -734,11 +805,18 @@ const App = {
     });
     if (!exercises.length) { alert('운동을 하나 이상 입력해주세요!'); return; }
     const note = document.getElementById('wk-note').value.trim();
+    const isEdit = !!editingWorkoutId;
     try {
-      await writeWorkout(selDate, exercises, note);
+      if (isEdit) {
+        await updateWorkoutInDB(editingWorkoutId, selDate, exercises, note);
+        editingWorkoutId = null;
+      } else {
+        await writeWorkout(selDate, exercises, note);
+      }
       this.closeModal('m-workout');
-      renderCal(curMonth);
-      this.toast('운동 기록 완료! 💪');
+      renderAllCal();
+      if (document.getElementById('screen-my').classList.contains('active')) this.showMyRecords();
+      this.toast(isEdit ? '수정됐어요 ✏️' : '운동 기록 완료! 💪');
     } catch(e) {
       console.error(e);
       alert('저장 실패. Firebase 설정을 확인해주세요.\n' + e.message);
@@ -797,11 +875,77 @@ const App = {
     }).join('') || '<div class="empty-state"><div class="empty-state-emoji">📅</div>아직 기록이 없어요</div>';
 
     renderMyCal(my.map(w => w.date));
+
+    // Workout list (sorted newest first)
+    const wkList = document.getElementById('my-workout-list');
+    const sorted = [...my].sort((a,b) => b.date.localeCompare(a.date));
+    wkList.innerHTML = sorted.length ? sorted.map(w => {
+      const exs = (w.exercises||[]).map(e => `${e.name}${e.duration ? ` ${e.duration}분`:''}`).join(' · ');
+      return `<div class="my-wk-item">
+        <div class="my-wk-header">
+          <div class="my-wk-date">${fmtDate(w.date)}</div>
+          <div class="my-wk-btns">
+            <button class="my-wk-btn my-wk-edit" onclick="App.editWorkout('${w.id}','${w.date}')">수정 ✏️</button>
+            <button class="my-wk-btn my-wk-del" onclick="App.deleteWorkout('${w.id}','${w.date}')">삭제 🗑️</button>
+          </div>
+        </div>
+        <div class="my-wk-exs">${exs||'기록 없음'}${w.note ? ' · 📝 '+w.note : ''}</div>
+      </div>`;
+    }).join('') : '<div class="empty-state"><div class="empty-state-emoji">🏃</div>운동 기록이 없어요</div>';
+  },
+
+  editWorkout(wid, dateStr) {
+    const wk = (workouts[dateStr]||[]).find(w => w.id === wid);
+    if (!wk) return;
+    selDate = dateStr;
+    editingWorkoutId = wid;
+    document.getElementById('wk-confirm').style.display = 'none';
+    document.getElementById('wk-form').style.display = 'block';
+    document.getElementById('wk-form-title').textContent = `${fmtDate(dateStr)} 수정 ✏️`;
+    const container = document.getElementById('ex-entries');
+    container.innerHTML = '';
+    (wk.exercises||[{ name:'', duration:'' }]).forEach(e => {
+      const div = document.createElement('div');
+      div.className = 'ex-row';
+      div.innerHTML = `
+        <input type="text" class="input-field ex-name" value="${e.name||''}" placeholder="운동 종류">
+        <input type="number" class="input-field ex-dur" value="${e.duration||''}" placeholder="분" min="1" max="600">
+        <button class="ex-del" onclick="this.parentElement.remove()">×</button>`;
+      container.appendChild(div);
+    });
+    document.getElementById('wk-note').value = wk.note || '';
+    this.openModal('m-workout');
+  },
+
+  async deleteWorkout(wid, dateStr) {
+    if (!confirm('이 운동 기록을 삭제할까요?')) return;
+    try {
+      await deleteWorkoutFromDB(wid);
+      if (workouts[dateStr]) workouts[dateStr] = workouts[dateStr].filter(w => w.id !== wid);
+      renderAllCal();
+      this.showMyRecords();
+      this.toast('삭제됐어요');
+    } catch(e) { alert('삭제 실패: ' + e.message); }
+  },
+
+  async deleteAccount() {
+    if (!confirm(`"${currentUser.name}" 계정을 삭제할까요?\n운동 기록도 모두 삭제돼요.`)) return;
+    try {
+      await deleteUserFromDB(currentUser.id);
+      delete allUsers[currentUser.id];
+      Object.keys(workouts).forEach(d => {
+        workouts[d] = workouts[d].filter(w => w.userId !== currentUser.id);
+      });
+      currentUser = null;
+      this.showScreen('screen-select');
+      await this.init();
+      this.toast('계정이 삭제됐어요');
+    } catch(e) { alert('삭제 실패: ' + e.message); }
   },
 
   showMain() {
     this.showScreen('screen-main');
-    renderCal(curMonth);
+    renderAllCal();
   },
 
   showScreen(id) {
