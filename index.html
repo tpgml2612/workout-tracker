@@ -612,76 +612,57 @@ function getWeeks() {
 // ====================================================
 // CALENDAR RENDER
 // ====================================================
-// first visible day of each month section (shown as "M/D" in the cell)
-const MONTH_STARTS = { 6: 22, 7: 1, 8: 1 };
 
 function renderAllCal() {
   const container = document.getElementById('cal-container');
-  let html = '';
+  const start = new Date(YEAR, 5, 22); // Jun 22
+  const end   = new Date(YEAR, 7, 14); // Aug 14
+  const startDow = start.getDay();     // 1 = Monday
 
-  [6, 7, 8].forEach(month => {
-    const firstDow = new Date(YEAR, month-1, 1).getDay();
-    const lastDay = new Date(YEAR, month, 0).getDate();
+  let cells = '';
 
-    // startCell: first grid cell to render (week containing VALID_START for June)
-    // endCell:   last grid cell + 1 (week containing VALID_END for August)
-    let startCell = 0;
-    let endCell = firstDow + lastDay;
+  // Leading empty cells (Sunday before Jun 22)
+  for (let i = 0; i < startDow; i++)
+    cells += '<div class="day-cell disabled"></div>';
 
-    if (month === 6) {
-      const pos = firstDow + 22 - 1; // cell index of Jun 22
-      startCell = Math.floor(pos / 7) * 7; // start of that week
-    }
-    if (month === 8) {
-      const pos = firstDow + 14 - 1; // cell index of Aug 14
-      endCell = Math.floor(pos / 7) * 7 + 7; // end of that week
-    }
+  // Every day Jun 22 → Aug 14 in one continuous stream
+  const cur = new Date(start);
+  while (cur <= end) {
+    const month = cur.getMonth() + 1;
+    const day   = cur.getDate();
+    const d     = ds(YEAR, month, day);
+    const wks   = workouts[d] || [];
+    const myWks = wks.filter(w => w.userId === currentUser?.id);
+    const todayCls = isToday(YEAR, month, day) ? ' today' : '';
+    const myCls    = myWks.length > 0 ? ' my-day' : '';
+    const dow      = cur.getDay();
+    const numColor = dow===0 ? 'color:#FF6B6B' : dow===6 ? 'color:#6B8CFF' : '';
 
-    let cells = '';
-    for (let cell = startCell; cell < endCell; cell++) {
-      const day = cell - firstDow + 1;
+    // Mark the first day of each month (and the very first day Jun 22)
+    const isMonthStart = day === 1 || (month === 6 && day === 22);
+    const numCls  = isMonthStart ? ' month-start' : '';
+    const dayLabel = isMonthStart ? `${month}/${day}` : `${day}`;
 
-      // Empty spacer: before month starts or after month ends
-      if (day < 1 || day > lastDay) {
-        cells += '<div class="day-cell disabled"></div>';
-        continue;
-      }
+    const profiles = wks.map(w => {
+      const u = allUsers[w.userId];
+      if (!u) return '';
+      return `<div class="mini-circle" style="background:${u.color}" title="${u.name}">${shortName(u)}</div>`;
+    }).join('');
 
-      const d = ds(YEAR, month, day);
-      const ir = inRange(YEAR, month, day);
+    cells += `<div class="day-cell${todayCls}${myCls}" onclick="App.dayClick('${d}',true)">
+      <div class="day-num${numCls}" style="${numColor}">${dayLabel}</div>
+      <div class="day-profiles">${profiles}</div>
+    </div>`;
 
-      // Out-of-range day (Jun 21, Aug 15): blank spacer to keep grid alignment
-      if (!ir) {
-        cells += '<div class="day-cell disabled"></div>';
-        continue;
-      }
+    cur.setDate(cur.getDate() + 1);
+  }
 
-      const wks = workouts[d] || [];
-      const myWks = wks.filter(w => w.userId === currentUser?.id);
-      const todayCls = isToday(YEAR, month, day) ? ' today' : '';
-      const myCls = myWks.length > 0 ? ' my-day' : '';
-      const dow = new Date(YEAR, month-1, day).getDay();
-      const isMonthStart = MONTH_STARTS[month] === day;
-      const numCls = isMonthStart ? ' month-start' : '';
-      const numColor = dow===0 ? 'color:#FF6B6B' : dow===6 ? 'color:#6B8CFF' : '';
-      const dayLabel = isMonthStart ? `${month}/${day}` : `${day}`;
+  // Trailing empty cells to complete the last week
+  const trailingCells = (6 - end.getDay() + 7) % 7;
+  for (let i = 0; i < trailingCells; i++)
+    cells += '<div class="day-cell disabled"></div>';
 
-      const profiles = wks.map(w => {
-        const u = allUsers[w.userId];
-        if (!u) return '';
-        return `<div class="mini-circle" style="background:${u.color}" title="${u.name}">${shortName(u)}</div>`;
-      }).join('');
-
-      cells += `<div class="day-cell${todayCls}${myCls}" onclick="App.dayClick('${d}',true)">
-        <div class="day-num${numCls}" style="${numColor}">${dayLabel}</div>
-        <div class="day-profiles">${profiles}</div>
-      </div>`;
-    }
-
-    html += `<div class="month-section"><div class="cal-grid">${cells}</div></div>`;
-  });
-
-  container.innerHTML = html;
+  container.innerHTML = `<div class="cal-grid">${cells}</div>`;
 }
 
 // ====================================================
