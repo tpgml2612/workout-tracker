@@ -168,13 +168,32 @@ body {
 .week-amount { font-size: 1.05rem; color: var(--primary); }
 .week-bonus-tag { font-size: 0.75rem; color: #2ECC71; margin-top: 2px; }
 .week-hint { font-size: 0.75rem; color: var(--text-light); margin-top: 2px; }
-.my-cal-month { font-size: 0.85rem; color: var(--text-light); text-align: center; margin: 14px 0 6px; }
-.my-cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; padding: 0 20px; }
+.my-cal-grid8 { display: grid; grid-template-columns: repeat(7, 1fr) 52px; gap: 3px; padding: 0 20px; }
 .my-cal-day { text-align: center; padding: 5px 2px; font-size: 0.78rem; border-radius: 8px; }
 .my-cal-day.worked { background: var(--primary); color: white; border-radius: 50%; font-weight: bold; }
 .my-cal-day.in-range { background: var(--card); }
-.my-cal-day.out { color: var(--text-light); }
+.my-cal-day.out { color: transparent; }
+.my-cal-day.ms { font-size: 0.65rem; }
 .my-cal-header-day { text-align: center; font-size: 0.7rem; color: var(--text-light); padding: 2px 0; }
+.week-sum {
+  background: #FFF0F5; border-radius: 6px;
+  font-size: 0.62rem; color: var(--primary);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  line-height: 1.5; padding: 2px 1px; text-align: center;
+}
+.week-sum.bonus { background: #F0FFF4; color: #2D8F5F; }
+
+/* ── CELEBRATION ── */
+@keyframes popIn {
+  0%   { transform: translate(-50%,-50%) scale(0.4); opacity:0; }
+  70%  { transform: translate(-50%,-50%) scale(1.08); }
+  100% { transform: translate(-50%,-50%) scale(1); opacity:1; }
+}
+@keyframes floatUp {
+  0%   { transform: translateY(0) rotate(0deg); opacity:1; }
+  100% { transform: translateY(-180px) rotate(30deg); opacity:0; }
+}
 
 /* ── MODALS ── */
 .modal-overlay {
@@ -337,8 +356,6 @@ body {
       <span>주간 보너스 <strong id="r-bonus">$0</strong></span>
     </div>
   </div>
-  <div class="section-title">주간 현황</div>
-  <div id="weekly-breakdown"></div>
   <div class="section-title">내 운동 달력</div>
   <div id="my-calendar"></div>
   <div class="section-title">운동 기록 목록</div>
@@ -668,28 +685,116 @@ function renderAllCal() {
 // ====================================================
 // MY CALENDAR RENDER
 // ====================================================
-function renderMyCal(myDates) {
-  const set = new Set(myDates);
-  const container = document.getElementById('my-calendar');
-  const DAYS = ['일','월','화','수','목','금','토'];
-  let html = '';
+function renderMyCal(myWorkouts) {
+  // date -> workout count map
+  const countMap = {};
+  myWorkouts.forEach(w => { countMap[w.date] = (countMap[w.date] || 0) + 1; });
 
-  [6,7,8].forEach(m => {
-    html += `<p class="my-cal-month">${YEAR}년 ${m}월</p>`;
-    html += '<div class="my-cal-grid">';
-    DAYS.forEach(d => html += `<div class="my-cal-header-day">${d}</div>`);
-    const last = new Date(YEAR,m,0).getDate();
-    const fdow = new Date(YEAR,m-1,1).getDay();
-    for (let i = 0; i < fdow; i++) html += '<div></div>';
-    for (let day = 1; day <= last; day++) {
-      const d = ds(YEAR,m,day);
-      const ir = inRange(YEAR,m,day);
-      const cls = set.has(d) ? 'worked' : ir ? 'in-range' : 'out';
-      html += `<div class="my-cal-day ${cls}">${day}</div>`;
+  const container = document.getElementById('my-calendar');
+  const start    = new Date(YEAR, 5, 22);
+  const end      = new Date(YEAR, 7, 14);
+  const startDow = start.getDay(); // 1=Mon
+
+  // Header row (8 cols)
+  const HDR = ['일','월','화','수','목','금','토',''].map(d =>
+    `<div class="my-cal-header-day">${d}</div>`).join('');
+
+  let cells = HDR;
+
+  // Leading empty cells
+  for (let i = 0; i < startDow; i++)
+    cells += '<div class="my-cal-day out"></div>';
+
+  let weekDays = 0, weekEarnings = 0;
+  const cur = new Date(start);
+
+  while (cur <= end) {
+    const month = cur.getMonth() + 1;
+    const day   = cur.getDate();
+    const d     = ds(YEAR, month, day);
+    const count = countMap[d] || 0;
+    const worked = count > 0;
+
+    if (worked) {
+      weekDays++;
+      weekEarnings += Math.min(count, 4) * 10;
     }
-    html += '</div>';
-  });
-  container.innerHTML = html;
+
+    const isMonthStart = day === 1 || (month === 6 && day === 22);
+    const label = isMonthStart ? `${month}/${day}` : `${day}`;
+    const cls   = worked ? 'worked' : 'in-range';
+    cells += `<div class="my-cal-day ${cls}${isMonthStart ? ' ms' : ''}">${label}</div>`;
+
+    const isSat     = cur.getDay() === 6;
+    const isLastDay = cur.getTime() === end.getTime();
+
+    if (isSat || isLastDay) {
+      // trailing empty cells for the last incomplete week
+      if (isLastDay && !isSat) {
+        const trailing = 6 - end.getDay();
+        for (let i = 0; i < trailing; i++)
+          cells += '<div class="my-cal-day out"></div>';
+      }
+      const bonus  = weekDays >= 4 ? 20 : 0;
+      const total  = weekEarnings + bonus;
+      const bonusLine = bonus > 0 ? `<span>🎉+$20</span>` : (weekDays > 0 ? `<span style="color:#bbb">${4-weekDays}일 남음</span>` : '');
+      cells += `<div class="week-sum${bonus > 0 ? ' bonus' : ''}">
+        <span>${weekDays}일</span>
+        <span>$${total}</span>
+        ${bonusLine}
+      </div>`;
+      weekDays = 0; weekEarnings = 0;
+    }
+
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  container.innerHTML = `<div class="my-cal-grid8">${cells}</div>`;
+}
+
+// ====================================================
+// CELEBRATION EFFECT
+// ====================================================
+function showCelebration() {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;pointer-events:none;overflow:hidden;';
+
+  const msg = document.createElement('div');
+  msg.innerHTML = '오늘도 해냈네요!<br>대단해요 💪';
+  msg.style.cssText = `
+    position:absolute; top:42%; left:50%;
+    transform:translate(-50%,-50%);
+    background:white; border-radius:24px;
+    padding:28px 36px; text-align:center;
+    font-family:'Jua',sans-serif; font-size:1.5rem;
+    color:var(--primary); line-height:1.6;
+    box-shadow:0 12px 40px rgba(255,139,148,0.35);
+    animation:popIn 0.4s ease-out;
+  `;
+  overlay.appendChild(msg);
+
+  const EMOJIS = ['💪','🎉','⭐','🌟','✨','🔥','🏆','👏','🎊','😄'];
+  for (let i = 0; i < 22; i++) {
+    const e = document.createElement('div');
+    e.textContent = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+    const delay = (Math.random() * 0.6).toFixed(2);
+    const dur   = (1.0 + Math.random() * 0.8).toFixed(2);
+    e.style.cssText = `
+      position:absolute;
+      left:${Math.random()*100}%;
+      top:${60 + Math.random()*35}%;
+      font-size:${1.2 + Math.random()*0.8}rem;
+      animation:floatUp ${dur}s ease-out ${delay}s forwards;
+    `;
+    overlay.appendChild(e);
+  }
+
+  document.body.appendChild(overlay);
+  setTimeout(() => {
+    overlay.style.transition = 'opacity 0.4s';
+    overlay.style.opacity = '0';
+    setTimeout(() => overlay.remove(), 400);
+  }, 2200);
 }
 
 // ====================================================
@@ -819,7 +924,8 @@ const App = {
       this.closeModal('m-workout');
       renderAllCal();
       if (document.getElementById('screen-my').classList.contains('active')) this.showMyRecords();
-      this.toast(isEdit ? '수정됐어요 ✏️' : '운동 기록 완료! 💪');
+      if (isEdit) this.toast('수정됐어요 ✏️');
+      else showCelebration();
     } catch(e) {
       console.error(e);
       alert('저장 실패. Firebase 설정을 확인해주세요.\n' + e.message);
@@ -859,25 +965,7 @@ const App = {
     document.getElementById('r-daily').textContent = `$${r.dailyTotal}`;
     document.getElementById('r-bonus').textContent = `$${r.bonusTotal}`;
 
-    const wb = document.getElementById('weekly-breakdown');
-    wb.innerHTML = r.weekData.map(w => {
-      const hint = w.daysWorked < 4
-        ? `<div class="week-hint">${4-w.daysWorked}일 더 하면 보너스!</div>` : '';
-      const bonus = w.bonus > 0
-        ? `<div class="week-bonus-tag">+$20 주간 보너스 🎉</div>` : hint;
-      return `<div class="week-card">
-        <div>
-          <div class="week-label-text">${w.label}</div>
-          <div class="week-sub">운동 ${w.daysWorked}일 · $${w.dailySum}</div>
-        </div>
-        <div class="week-right">
-          <div class="week-amount">$${w.total}</div>
-          ${bonus}
-        </div>
-      </div>`;
-    }).join('') || '<div class="empty-state"><div class="empty-state-emoji">📅</div>아직 기록이 없어요</div>';
-
-    renderMyCal(my.map(w => w.date));
+    renderMyCal(my);
 
     // Workout list (sorted newest first)
     const wkList = document.getElementById('my-workout-list');
