@@ -100,10 +100,10 @@ body {
 
 /* ── CALENDAR ── */
 .calendar-container { padding: 14px 20px; }
-.month-section { margin-bottom: 24px; }
+.month-section { margin-bottom: 6px; }
 .month-section-title {
   text-align: center; font-size: 1rem;
-  color: var(--primary); padding: 10px 0 8px;
+  color: var(--primary); padding: 6px 0 4px;
   letter-spacing: 0.05em;
 }
 .cal-header {
@@ -622,21 +622,46 @@ function renderAllCal() {
   let html = '';
 
   [6, 7, 8].forEach(month => {
-    const last = new Date(YEAR, month, 0).getDate();
     const firstDow = new Date(YEAR, month-1, 1).getDay();
+    const lastDay = new Date(YEAR, month, 0).getDate();
+
+    // startCell: first grid cell to render (week containing VALID_START for June)
+    // endCell:   last grid cell + 1 (week containing VALID_END for August)
+    let startCell = 0;
+    let endCell = firstDow + lastDay;
+
+    if (month === 6) {
+      const pos = firstDow + 22 - 1; // cell index of Jun 22
+      startCell = Math.floor(pos / 7) * 7; // start of that week
+    }
+    if (month === 8) {
+      const pos = firstDow + 14 - 1; // cell index of Aug 14
+      endCell = Math.floor(pos / 7) * 7 + 7; // end of that week
+    }
+
     let cells = '';
+    for (let cell = startCell; cell < endCell; cell++) {
+      const day = cell - firstDow + 1;
 
-    for (let i = 0; i < firstDow; i++)
-      cells += '<div class="day-cell disabled"></div>';
+      // Empty spacer: before month starts or after month ends
+      if (day < 1 || day > lastDay) {
+        cells += '<div class="day-cell disabled"></div>';
+        continue;
+      }
 
-    for (let day = 1; day <= last; day++) {
       const d = ds(YEAR, month, day);
       const ir = inRange(YEAR, month, day);
+
+      // Out-of-range day (Jun 21, Aug 15): blank spacer to keep grid alignment
+      if (!ir) {
+        cells += '<div class="day-cell disabled"></div>';
+        continue;
+      }
+
       const wks = workouts[d] || [];
       const myWks = wks.filter(w => w.userId === currentUser?.id);
-      const todayCls = isToday(YEAR,month,day) ? ' today' : '';
+      const todayCls = isToday(YEAR, month, day) ? ' today' : '';
       const myCls = myWks.length > 0 ? ' my-day' : '';
-      const rangeCls = ir ? '' : ' out-range';
       const dow = new Date(YEAR, month-1, day).getDay();
       const numColor = dow===0 ? 'color:#FF6B6B' : dow===6 ? 'color:#6B8CFF' : '';
 
@@ -646,7 +671,7 @@ function renderAllCal() {
         return `<div class="mini-circle" style="background:${u.color}" title="${u.name}">${shortName(u)}</div>`;
       }).join('');
 
-      cells += `<div class="day-cell${rangeCls}${todayCls}${myCls}" onclick="App.dayClick('${d}',${ir})">
+      cells += `<div class="day-cell${todayCls}${myCls}" onclick="App.dayClick('${d}',true)">
         <div class="day-num" style="${numColor}">${day}</div>
         <div class="day-profiles">${profiles}</div>
       </div>`;
