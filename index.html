@@ -737,7 +737,7 @@ function renderMyCal(myWorkouts) {
       }
       const bonus  = weekDays >= 4 ? 20 : 0;
       const total  = weekEarnings + bonus;
-      const bonusLine = bonus > 0 ? `<span>🎉+$20</span>` : (weekDays > 0 ? `<span style="color:#bbb">${4-weekDays}일 남음</span>` : '');
+      const bonusLine = bonus > 0 ? `<span>🎉+$20</span>` : '';
       cells += `<div class="week-sum${bonus > 0 ? ' bonus' : ''}">
         <span>${weekDays}일</span>
         <span>$${total}</span>
